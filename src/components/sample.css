@@ -1,0 +1,21 @@
+
+.actions {
+    color: var(--text-secondary-color);
+  }
+  
+  .textPrimary {
+    color: var(--text-primary-color);
+  }
+  
+  .data-grid-container {
+    height: 500px;
+    width: 100%;
+
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+        padding-left: 14%;
+    }
+
+  }
+  
