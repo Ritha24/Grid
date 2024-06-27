@@ -17,49 +17,22 @@ import {
   GridRowModes,
   DataGrid,
   GridColDef,
-  GridToolbarContainer,
   GridActionsCellItem,
   GridEventListener,
   GridRowId,
   GridRowModel,
   GridRowEditStopReasons,
-  GridSlots,
 } from '@mui/x-data-grid';
+import SnackbarComponent from './snackbar';
 import './sample.css';
-
-interface EditToolbarProps {
-  setRows: (newRows: (oldRows: GridRowsProp) => GridRowsProp) => void;
-  setRowModesModel: (
-    newModel: (oldModel: GridRowModesModel) => GridRowModesModel,
-  ) => void;
-}
-
-function EditToolbar(props: EditToolbarProps) {
-  const { setRows, setRowModesModel } = props;
-
-  const handleClick = () => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setRows((oldRows) => [...oldRows, { id, postId: '', name: '', email: '', body: '', isNew: true }]);
-    setRowModesModel((oldModel) => ({
-      ...oldModel,
-      [id]: { mode: GridRowModes.Edit, fieldToFocus: 'name' },
-    }));
-  };
-
-  return (
-    <GridToolbarContainer>
-      <Button color="primary" startIcon={<AddIcon />} onClick={handleClick} >
-        Add record
-      </Button>
-    </GridToolbarContainer>
-  );
-}
+import { CustomColumnMenu } from './CustomColumnHeader';
 
 export default function FullFeaturedCrudGrid() {
   const [rows, setRows] = React.useState<GridRowsProp>([]);
   const [rowModesModel, setRowModesModel] = React.useState<GridRowModesModel>({});
   const [open, setOpen] = React.useState(false);
   const [selectedRowId, setSelectedRowId] = React.useState<GridRowId | null>(null);
+  const [snackbar, setSnackbar] = React.useState({ open: false, message: '', severity: 'success' as 'success' | 'info' | 'warning' | 'error' });
 
   React.useEffect(() => {
     fetch('https://jsonplaceholder.typicode.com/comments')
@@ -112,13 +85,34 @@ export default function FullFeaturedCrudGrid() {
   };
 
   const processRowUpdate = (newRow: GridRowModel) => {
+    if (!newRow.postId || !newRow.name || !newRow.email || !newRow.body) {
+      setSnackbar({ open: true, message: 'All fields are required!', severity: 'error' });
+      setRowModesModel((prevModel) => ({
+        ...prevModel,
+        [newRow.id]: { mode: GridRowModes.Edit },
+      }));
+      return;
+    }
+
     const updatedRow = { ...newRow, isNew: false };
-    setRows(rows.map((row) => (row.id === newRow.id ? updatedRow : row)));
+    setRows((oldRows) => {
+      const newRows = oldRows.filter((row) => row.id !== newRow.id);
+      return [...newRows, updatedRow];
+    });
     return updatedRow;
   };
 
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
     setRowModesModel(newRowModesModel);
+  };
+
+  const handleAddClick = () => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setRows((oldRows) => [{ id, postId: '', name: '', email: '', body: '', isNew: true }, ...oldRows]);
+    setRowModesModel((oldModel) => ({
+      ...oldModel,
+      [id]: { mode: GridRowModes.Edit, fieldToFocus: 'name' },
+    }));
   };
 
   const columns: GridColDef[] = [
@@ -175,20 +169,28 @@ export default function FullFeaturedCrudGrid() {
   ];
 
   return (
-    <Box className="data-grid-container">
+    <Box className="data-grid-container" sx={{ width: '100%', height: 600 }}>
+      <div id="add-record-button">
+      <Button
+        color="primary"
+        startIcon={<AddIcon />}
+        onClick={handleAddClick}
+      >
+        Add record
+      </Button>
+      </div>
       <DataGrid
         rows={rows}
         columns={columns}
+        checkboxSelection
         editMode="row"
         rowModesModel={rowModesModel}
         onRowModesModelChange={handleRowModesModelChange}
         onRowEditStop={handleRowEditStop}
         processRowUpdate={processRowUpdate}
-        slots={{
-          toolbar: EditToolbar as GridSlots['toolbar'],
-        }}
-        slotProps={{
-          toolbar: { setRows, setRowModesModel },
+        rowHeight={45}
+        components={{
+          ColumnMenu: CustomColumnMenu,
         }}
       />
       <Dialog
@@ -212,6 +214,12 @@ export default function FullFeaturedCrudGrid() {
           </Button>
         </DialogActions>
       </Dialog>
+      <SnackbarComponent
+        open={snackbar.open}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        message={snackbar.message}
+        severity={snackbar.severity}
+      />
     </Box>
   );
 }
