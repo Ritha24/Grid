@@ -7,6 +7,7 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlined';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Close';
 import Dialog from '@mui/material/Dialog';
+import TextField from '@mui/material/TextField';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
@@ -33,7 +34,9 @@ export default function FullFeaturedCrudGrid() {
   const [open, setOpen] = React.useState(false);
   const [selectedRowId, setSelectedRowId] = React.useState<GridRowId | null>(null);
   const [snackbar, setSnackbar] = React.useState({ open: false, message: '', severity: 'success' as 'success' | 'info' | 'warning' | 'error' });
-  
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [formData, setFormData] = React.useState({ postId: '', name: '', email: '', body: '' });
+
   React.useEffect(() => {
     fetch('https://jsonplaceholder.typicode.com/comments')
       .then((response) => response.json())
@@ -86,21 +89,12 @@ export default function FullFeaturedCrudGrid() {
   const processRowUpdate = (newRow: GridRowModel) => {
     if (!newRow.postId || !newRow.name || !newRow.email || !newRow.body) {
       setSnackbar({ open: true, message: 'All fields are required!', severity: 'error' });
-      return { ...newRow, isNew: true }; // Return the row with isNew flag to keep it in edit mode
+      return { ...newRow, isNew: true };
     }
   
     const updatedRow = { ...newRow, isNew: false };
-    setRows((oldRows) => {
-      if (newRow.isNew) {
-        // For new rows, filter out the temporary row and add the updated row at the end
-        const filteredRows = oldRows.filter((row) => row.id !== newRow.id);
-        return [...filteredRows, updatedRow];
-      } else {
-        // For existing rows, update in place
-        return oldRows.map((row) => (row.id === newRow.id ? updatedRow : row));
-      }
-    });
-    setSnackbar({ open: true, message: 'Record saved successfully!', severity: 'success' });
+    setRows((oldRows) => oldRows.map((row) => (row.id === newRow.id ? updatedRow : row)));
+    setSnackbar({ open: true, message: 'Record updated successfully!', severity: 'success' });
     return updatedRow;
   };
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
@@ -108,12 +102,34 @@ export default function FullFeaturedCrudGrid() {
   };
 
   const handleAddClick = () => {
+    setFormOpen(true);
+    setFormData({ postId: '', name: '', email: '', body: '' });
+  };
+  const handleFormChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [event.target.name]: event.target.value });
+  };
+  
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const emptyFields = Object.entries(formData).filter(([ key ,value]) => value === '');
+    
+    if (emptyFields.length > 0) {
+      setSnackbar({ 
+        open: true, 
+        message: `Please fill out the following fields: ${emptyFields.map(([key]) => key).join(', ')}`, 
+        severity: 'error' 
+      });
+      return;
+    }
     const id = Math.random().toString(36).substr(2, 9);
-    setRows((oldRows) => [{ id, postId: '', name: '', email: '', body: '', isNew: true }, ...oldRows]);
-    setRowModesModel((oldModel) => ({
-      ...oldModel,
-      [id]: { mode: GridRowModes.Edit, fieldToFocus: 'name' },
-    }));
+    const newRow = { id, ...formData, isNew: false };
+    setRows((oldRows) => [...oldRows, newRow]);
+    setFormOpen(false);
+    setSnackbar({ open: true, message: 'New record added successfully!', severity: 'success' });
+  };
+  
+  const handleFormClose = () => {
+    setFormOpen(false);
   };
 
   const columns: GridColDef[] = [
@@ -170,7 +186,9 @@ export default function FullFeaturedCrudGrid() {
   ];
 
   return (
+    
     <Box className="data-grid-container" sx={{ width: '100%', height: 600 }}>
+      
       <div id="add-record-button">
       <Button
         color="primary"
@@ -194,6 +212,60 @@ export default function FullFeaturedCrudGrid() {
         }}
         rowHeight={45}
       />
+      <Dialog open={formOpen} onClose={handleFormClose}>
+      <DialogTitle className='form-title'>Add New Record</DialogTitle>
+      <form onSubmit={handleFormSubmit}>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            name="postId"
+            label="Post ID"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={formData.postId}
+            onChange={handleFormChange}
+          />
+          <TextField
+            margin="dense"
+            name="name"
+            label="Name"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={formData.name}
+            onChange={handleFormChange}
+          />
+          <TextField
+            margin="dense"
+            name="email"
+            label="Email"
+            type="email"
+            fullWidth
+            variant="outlined"
+            value={formData.email}
+            onChange={handleFormChange}
+          />
+          <TextField
+            margin="dense"
+            name="body"
+            label="Body"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={formData.body}
+            onChange={handleFormChange}
+            multiline
+            rows={4}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleFormClose}>Cancel</Button>
+          <Button type="submit">Add</Button>
+        </DialogActions>
+      </form>
+    </Dialog>
       <Dialog
         open={open}
         onClose={handleCancelDelete}
