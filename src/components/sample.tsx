@@ -25,7 +25,7 @@ import {
 } from '@mui/x-data-grid';
 import SnackbarComponent from './snackbar';
 import './sample.css';
-import { CustomColumnMenu } from './CustomColumnHeader';
+// import { CustomColumnMenu } from './CustomColumnHeader';
 
 export default function FullFeaturedCrudGrid() {
   const [rows, setRows] = React.useState<GridRowsProp>([]);
@@ -33,7 +33,7 @@ export default function FullFeaturedCrudGrid() {
   const [open, setOpen] = React.useState(false);
   const [selectedRowId, setSelectedRowId] = React.useState<GridRowId | null>(null);
   const [snackbar, setSnackbar] = React.useState({ open: false, message: '', severity: 'success' as 'success' | 'info' | 'warning' | 'error' });
-
+  
   React.useEffect(() => {
     fetch('https://jsonplaceholder.typicode.com/comments')
       .then((response) => response.json())
@@ -53,7 +53,6 @@ export default function FullFeaturedCrudGrid() {
   const handleSaveClick = (id: GridRowId) => () => {
     setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
   };
-
   const handleDeleteClick = (id: GridRowId) => () => {
     setOpen(true);
     setSelectedRowId(id);
@@ -87,21 +86,23 @@ export default function FullFeaturedCrudGrid() {
   const processRowUpdate = (newRow: GridRowModel) => {
     if (!newRow.postId || !newRow.name || !newRow.email || !newRow.body) {
       setSnackbar({ open: true, message: 'All fields are required!', severity: 'error' });
-      setRowModesModel((prevModel) => ({
-        ...prevModel,
-        [newRow.id]: { mode: GridRowModes.Edit },
-      }));
-      return;
+      return { ...newRow, isNew: true }; // Return the row with isNew flag to keep it in edit mode
     }
-
+  
     const updatedRow = { ...newRow, isNew: false };
     setRows((oldRows) => {
-      const newRows = oldRows.filter((row) => row.id !== newRow.id);
-      return [...newRows, updatedRow];
+      if (newRow.isNew) {
+        // For new rows, filter out the temporary row and add the updated row at the end
+        const filteredRows = oldRows.filter((row) => row.id !== newRow.id);
+        return [...filteredRows, updatedRow];
+      } else {
+        // For existing rows, update in place
+        return oldRows.map((row) => (row.id === newRow.id ? updatedRow : row));
+      }
     });
+    setSnackbar({ open: true, message: 'Record saved successfully!', severity: 'success' });
     return updatedRow;
   };
-
   const handleRowModesModelChange = (newRowModesModel: GridRowModesModel) => {
     setRowModesModel(newRowModesModel);
   };
@@ -188,10 +189,10 @@ export default function FullFeaturedCrudGrid() {
         onRowModesModelChange={handleRowModesModelChange}
         onRowEditStop={handleRowEditStop}
         processRowUpdate={processRowUpdate}
-        rowHeight={45}
-        components={{
-          ColumnMenu: CustomColumnMenu,
+        onProcessRowUpdateError={(error) => {
+          setSnackbar({ open: true, message: error.message, severity: 'error' });
         }}
+        rowHeight={45}
       />
       <Dialog
         open={open}

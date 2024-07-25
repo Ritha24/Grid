@@ -18,6 +18,11 @@
     font-size: 14px;
     font-family: sans-serif;
   }
+  @media (prefers-color-scheme: dark) {
+    :root {
+        padding-left: 14%;
+    }
+  }
   @media (prefers-color-scheme: light) {
     :root {
         padding-left: 14%;
@@ -35,18 +40,9 @@
 .data-grid-container MuiBox-root css-0{
     color: antiquewhite;
 }
-/* Make the menu icon always visible */
-.data-grid-container .MuiDataGrid-columnHeader .MuiDataGrid-menuIcon {
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    padding-right: 50px;
-    /* z-index: 1000; */
-  }
-  
+.form-title{
+  padding-top: 100px;
+}
   
   #add-record-button{
     padding-left: 950px;
